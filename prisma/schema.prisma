@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  otp       String?
+  otpExpiry DateTime?
+  jobs      Job[]
+  worker    Worker?
+}
+
+model Worker {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  city          String?
+  rating        Float    @default(0)
+  experience    Int
+  createdAt     DateTime @default(now())
+  isAvailable   Boolean  @default(true)
+  bio           String?
+  completedJobs Int      @default(0)
+  latitude      Float?
+  longitude     Float?
+  phone         String?
+  profileImage  String?
+  skill         String[]
+  area          String?
+  pincode       String?
+  state         String?
+  jobs          Job[]
+  user          User     @relation(fields: [userId], references: [id])
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  price       Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  imageUrl    String?
+  category    String?
+  jobs        Job[]
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  description String
+  budget      Int
+  state       String?
+  city        String?
+  area        String?
+  pincode     String?
+  status      JobStatus @default(OPEN)
+  customerId  String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  latitude    Float?
+  longitude   Float?
+  workerId    String?
+  serviceId   String
+  customer    User      @relation(fields: [customerId], references: [id])
+  service     Service   @relation(fields: [serviceId], references: [id])
+  worker      Worker?   @relation(fields: [workerId], references: [id])
+}
+
+enum Role {
+  CUSTOMER
+  WORKER
+  ADMIN
+}
+
+enum JobStatus {
+  OPEN
+  PENDING_ACCEPTANCE
+  ACCEPTED
+  ON_THE_WAY
+  ARRIVED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
