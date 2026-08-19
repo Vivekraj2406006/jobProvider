@@ -87,12 +87,12 @@ const navLinks = isLoggedIn
         label: "My Jobs",
       },
       {
-        href: "/worker/create",
+        href: "/workers/create",
         icon: Hammer,
         label: "Become Worker",
       },
       {
-        href: "/dashboard/worker",
+        href: "/worker",
         icon: BriefcaseBusiness,
         label: "Worker Dashboard",
       },

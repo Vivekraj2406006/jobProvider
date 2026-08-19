@@ -1,3 +1,5 @@
+"use client";
+
 import { Mail, User } from "lucide-react";
 
 interface CustomerCardProps {
@@ -9,33 +11,28 @@ interface CustomerCardProps {
 
 export default function CustomerCard({ customer }: CustomerCardProps) {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-6 text-xl font-semibold text-gray-900">
-        Customer Information
-      </h2>
+    <div className="rounded-3xl border border-gray-150 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
+      <h2 className="text-lg font-bold text-gray-900">Customer Details</h2>
+      <p className="text-xs text-gray-400 mt-0.5 mb-6">Contact info for this booking</p>
 
-      <div className="space-y-5">
+      <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-blue-100 p-3">
-            <User className="text-blue-600" size={20} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 border border-blue-100">
+            <User size={18} />
           </div>
-
           <div>
-            <p className="text-sm text-gray-500">Customer Name</p>
-
-            <p className="font-semibold text-gray-900">{customer.name}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Customer Name</p>
+            <p className="text-sm font-semibold text-gray-800">{customer.name}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="rounded-xl bg-green-100 p-3">
-            <Mail className="text-green-600" size={20} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100">
+            <Mail size={18} />
           </div>
-
-          <div>
-            <p className="text-sm text-gray-500">Email</p>
-
-            <p className="font-semibold text-gray-900">{customer.email}</p>
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Email Address</p>
+            <p className="text-sm font-semibold text-gray-800 break-all">{customer.email}</p>
           </div>
         </div>
       </div>

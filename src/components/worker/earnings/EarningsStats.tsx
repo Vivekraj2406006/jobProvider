@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Calendar,
   CalendarDays,
@@ -26,47 +28,53 @@ export default function EarningsStats({
   averagePerJob,
 }: Props) {
   return (
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <EarningsCard
-        title="Today"
-        value={`₹${todayEarnings}`}
+        title="Today's Payout"
+        value={`₹ ${todayEarnings}`}
         icon={Calendar}
-        iconColor="bg-green-600"
+        iconColor="bg-emerald-500 border border-emerald-100"
+        cardHoverAccent="emerald-500/20"
       />
 
       <EarningsCard
         title="This Week"
-        value={`₹${weeklyEarnings}`}
+        value={`₹ ${weeklyEarnings}`}
         icon={CalendarDays}
-        iconColor="bg-blue-600"
+        iconColor="bg-blue-500 border border-blue-100"
+        cardHoverAccent="blue-500/20"
       />
 
       <EarningsCard
         title="This Month"
-        value={`₹${monthlyEarnings}`}
+        value={`₹ ${monthlyEarnings}`}
         icon={IndianRupee}
-        iconColor="bg-purple-600"
+        iconColor="bg-indigo-500 border border-indigo-100"
+        cardHoverAccent="indigo-500/20"
       />
 
       <EarningsCard
-        title="Total Earnings"
-        value={`₹${totalEarnings}`}
+        title="Total Revenue"
+        value={`₹ ${totalEarnings}`}
         icon={TrendingUp}
-        iconColor="bg-orange-600"
+        iconColor="bg-amber-500 border border-amber-100"
+        cardHoverAccent="amber-500/20"
       />
 
       <EarningsCard
-        title="Completed Jobs"
+        title="Completed Payouts"
         value={totalJobs}
         icon={BriefcaseBusiness}
-        iconColor="bg-cyan-600"
+        iconColor="bg-cyan-500 border border-cyan-100"
+        cardHoverAccent="cyan-500/20"
       />
 
       <EarningsCard
-        title="Average / Job"
-        value={`₹${averagePerJob}`}
+        title="Average / Assignment"
+        value={`₹ ${Math.round(averagePerJob)}`}
         icon={IndianRupee}
-        iconColor="bg-pink-600"
+        iconColor="bg-pink-500 border border-pink-100"
+        cardHoverAccent="pink-500/20"
       />
     </div>
   );

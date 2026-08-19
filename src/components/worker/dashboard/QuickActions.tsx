@@ -1,33 +1,43 @@
+"use client";
+
 import Link from "next/link";
-import { BriefcaseBusiness, MapPin, Power } from "lucide-react";
+import { BriefcaseBusiness, User, Wallet } from "lucide-react";
 
 const actions = [
   {
-    title: "View Jobs",
+    title: "Browse Assigned Jobs",
+    subtitle: "Manage details, timelines & statuses",
     href: "/worker/jobs",
     icon: BriefcaseBusiness,
-    color: "bg-blue-600",
+    bgColor: "bg-blue-50 border border-blue-100",
+    iconColor: "text-blue-600",
+    hoverBorder: "hover:border-blue-300",
   },
   {
-    title: "Update Location",
+    title: "Update Coverage",
+    subtitle: "Modify profile skills & address details",
     href: "/worker/profile",
-    icon: MapPin,
-    color: "bg-orange-500",
+    icon: User,
+    bgColor: "bg-amber-50 border border-amber-100",
+    iconColor: "text-amber-600",
+    hoverBorder: "hover:border-amber-300",
   },
   {
-    title: "Go Offline",
-    href: "#",
-    icon: Power,
-    color: "bg-green-600",
+    title: "Earnings Dashboard",
+    subtitle: "Track completed payouts & dates",
+    href: "/worker/earnings",
+    icon: Wallet,
+    bgColor: "bg-emerald-50 border border-emerald-100",
+    iconColor: "text-emerald-600",
+    hoverBorder: "hover:border-emerald-300",
   },
 ];
 
 export default function QuickActions() {
   return (
-    <section className="rounded-2xl bg-white p-6 shadow-sm">
-      <h2 className="mb-6 text-xl font-semibold text-gray-900">
-        Quick Actions
-      </h2>
+    <section className="rounded-3xl border border-gray-100 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+      <h2 className="text-lg font-bold text-gray-900">Quick Actions</h2>
+      <p className="text-xs text-gray-400 mt-0.5 mb-6">Frequently used dashboard shortcuts</p>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {actions.map((action) => {
@@ -37,15 +47,20 @@ export default function QuickActions() {
             <Link
               key={action.title}
               href={action.href}
-              className="flex items-center gap-4 rounded-xl border border-gray-200 p-5 transition hover:border-blue-300 hover:shadow-md"
+              className={`group flex items-start gap-4 rounded-2xl border border-gray-50 p-5 transition-all duration-300 hover:bg-gray-50/50 hover:shadow-sm ${action.hoverBorder}`}
             >
-              <div className={`rounded-xl p-3 ${action.color}`}>
-                <Icon className="text-white" size={22} />
+              <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${action.bgColor} transition-transform duration-300 group-hover:scale-110`}>
+                <Icon className={action.iconColor} size={20} />
               </div>
 
-              <span className="font-semibold text-gray-800">
-                {action.title}
-              </span>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-gray-800 transition-colors group-hover:text-gray-900">
+                  {action.title}
+                </h3>
+                <p className="mt-1 text-xs text-gray-500 line-clamp-2">
+                  {action.subtitle}
+                </p>
+              </div>
             </Link>
           );
         })}
