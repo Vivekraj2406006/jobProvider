@@ -11,17 +11,8 @@ interface SendOtpBody {
 
 export async function POST(request: NextRequest) {
   try {
-    if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Email service is not configured",
-        },
-        {
-          status: 500,
-        },
-      );
-    }
+    const isDevelopment = process.env.NODE_ENV !== "production";
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
 
     const body: SendOtpBody = await request.json();
 
@@ -89,45 +80,105 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: email,
-      subject: "Password Reset OTP",
-      html: `
-          <div style="font-family: Arial, sans-serif;">
-            <h2>Password Reset Request</h2>
+    if (!process.env.RESEND_API_KEY) {
+      if (isDevelopment) {
+        console.log(`Development OTP for ${email}: ${otp}`);
 
-            <p>Your OTP is:</p>
-
-            <h1 style="letter-spacing: 5px;">
-              ${otp}
-            </h1>
-
-            <p>
-              This OTP will expire in
-              <strong>10 minutes</strong>.
-            </p>
-
-            <p>
-              If you did not request a password reset,
-              please ignore this email.
-            </p>
-          </div>
-        `,
-    });
-
-    if (error) {
-      console.error("Resend Error:", error);
+        return NextResponse.json(
+          {
+            success: true,
+            message: "OTP generated successfully in development mode.",
+          },
+          {
+            status: 200,
+          },
+        );
+      }
 
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to send OTP",
+          message: "Email service is not configured",
         },
         {
           status: 500,
         },
       );
+    }
+
+    try {
+      const { error } = await resend.emails.send({
+        from: fromAddress,
+        to: email,
+        subject: "Password Reset OTP",
+        html: `
+            <div style="font-family: Arial, sans-serif;">
+              <h2>Password Reset Request</h2>
+
+              <p>Your OTP is:</p>
+
+              <h1 style="letter-spacing: 5px;">
+                ${otp}
+              </h1>
+
+              <p>
+                This OTP will expire in
+                <strong>10 minutes</strong>.
+              </p>
+
+              <p>
+                If you did not request a password reset,
+                please ignore this email.
+              </p>
+            </div>
+          `,
+      });
+
+      if (error) {
+        if (isDevelopment) {
+          console.error("Resend Error in development mode:", error);
+          console.log(`Fallback OTP for ${email}: ${otp}`);
+
+          return NextResponse.json(
+            {
+              success: true,
+              message: "OTP generated successfully in development mode.",
+            },
+            {
+              status: 200,
+            },
+          );
+        }
+
+        console.error("Resend Error:", error);
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Failed to send OTP",
+          },
+          {
+            status: 500,
+          },
+        );
+      }
+    } catch (emailError) {
+      if (isDevelopment) {
+        console.error("Email delivery failed in development mode:", emailError);
+        console.log(`Fallback OTP for ${email}: ${otp}`);
+
+        return NextResponse.json(
+          {
+            success: true,
+            message: "OTP generated successfully in development mode.",
+          },
+          {
+            status: 200,
+          },
+        );
+      }
+
+      throw emailError;
     }
 
     return NextResponse.json(

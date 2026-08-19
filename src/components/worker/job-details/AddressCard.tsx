@@ -1,3 +1,5 @@
+"use client";
+
 import { MapPin, Navigation, Copy } from "lucide-react";
 
 interface AddressCardProps {
@@ -7,7 +9,6 @@ interface AddressCardProps {
     state: string | null;
     pincode: string | null;
   };
-
   location: {
     latitude: number | null;
     longitude: number | null;
@@ -26,15 +27,14 @@ export default function AddressCard({ address, location }: AddressCardProps) {
 
   function copyAddress() {
     navigator.clipboard.writeText(fullAddress);
-    alert("Address copied.");
+    alert("Address copied to clipboard.");
   }
 
   function openMaps() {
     if (location.latitude == null || location.longitude == null) {
-      alert("Location unavailable.");
+      alert("Coordinates unavailable for navigation.");
       return;
     }
-
     window.open(
       `https://www.google.com/maps?q=${location.latitude},${location.longitude}`,
       "_blank",
@@ -42,39 +42,52 @@ export default function AddressCard({ address, location }: AddressCardProps) {
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-3xl border border-gray-150 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.015)]">
       <div className="mb-6 flex items-center gap-3">
-        <div className="rounded-xl bg-red-100 p-3">
-          <MapPin className="text-red-600" size={20} />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 border border-rose-100">
+          <MapPin size={18} />
         </div>
-
-        <h2 className="text-xl font-semibold">Customer Address</h2>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Physical Address</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Service delivery destination</p>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <p>{address.area || "-"}</p>
-
-        <p>{address.city || "-"}</p>
-
-        <p>{address.state || "-"}</p>
-
-        <p>{address.pincode || "-"}</p>
+      <div className="rounded-2xl border border-gray-50 bg-gray-50/20 p-5 space-y-2">
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Street / Area</span>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{address.area || "-"}</p>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">City / Town</span>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{address.city || "-"}</p>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">State / Region</span>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{address.state || "-"}</p>
+          </div>
+          <div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">ZIP Pincode</span>
+            <p className="mt-1 text-sm font-semibold text-gray-800">{address.pincode || "-"}</p>
+          </div>
+        </div>
       </div>
 
-      <div className="mt-8 flex flex-wrap gap-4">
+      <div className="mt-6 flex flex-wrap gap-3">
         <button
           onClick={openMaps}
-          className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-medium text-white hover:bg-blue-700"
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl bg-[#c8a56a] hover:bg-[#b08e54] text-white px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-sm shadow-amber-500/10"
         >
-          <Navigation size={18} />
-          Open in Maps
+          <Navigation size={14} />
+          Navigate in Maps
         </button>
 
         <button
           onClick={copyAddress}
-          className="flex items-center gap-2 rounded-xl border border-gray-300 px-5 py-3 font-medium hover:bg-gray-100"
+          className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 px-5 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-300 shadow-sm"
         >
-          <Copy size={18} />
+          <Copy size={14} />
           Copy Address
         </button>
       </div>

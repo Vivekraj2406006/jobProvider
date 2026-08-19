@@ -59,7 +59,7 @@
 
         window.dispatchEvent(new Event("auth-change"));
 
-        router.push("/dashboard");
+        router.push("/dashboard/customer");
       } catch (error: unknown) {
         if (axios.isAxiosError(error)) {
           if (!error.response) {
