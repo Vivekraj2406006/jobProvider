@@ -16,28 +16,20 @@ const getJwtSecretKey = () => {
   return new TextEncoder().encode(secret);
 };
 
-// ==============================
-// Password Hashing
-// ==============================
-
 export async function hashPassword(password: string) {
   return bcrypt.hash(password, 10);
 }
 
 export async function comparePassword(
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ) {
   return bcrypt.compare(password, hashedPassword);
 }
 
-// ==============================
-// Generate JWT
-// ==============================
-
 export async function generateToken(
   userId: string,
-  role: string
+  role: string,
 ): Promise<string> {
   return await new SignJWT({
     userId,
@@ -50,49 +42,22 @@ export async function generateToken(
     .setExpirationTime("7d")
     .sign(getJwtSecretKey());
 }
+export async function verifyToken(token: string): Promise<TokenPayload> {
+  const { payload } = await jwtVerify(token, getJwtSecretKey());
 
-// ==============================
-// Verify JWT
-// ==============================
+  const userId = payload.userId;
+  const role = payload.role;
 
-export async function verifyToken(
-  token: string
-): Promise<TokenPayload> {
-  try {
-    console.log("========== JWT VERIFY ==========");
-    console.log("JWT_SECRET Exists:", !!process.env.JWT_SECRET);
-    console.log("Received Token:", token);
-
-    const { payload } = await jwtVerify(
-      token,
-      getJwtSecretKey()
-    );
-
-    console.log("Decoded Payload:", payload);
-
-    const userId = payload.userId;
-    const role = payload.role;
-
-    if (typeof userId !== "string") {
-      throw new Error("Invalid token payload: userId missing");
-    }
-
-    if (typeof role !== "string") {
-      throw new Error("Invalid token payload: role missing");
-    }
-
-    console.log("JWT Verified Successfully");
-    console.log("===============================");
-
-    return {
-      userId,
-      role,
-    };
-  } catch (error) {
-    console.error("========== JWT ERROR ==========");
-    console.error(error);
-    console.error("===============================");
-
-    throw error;
+  if (typeof userId !== "string") {
+    throw new Error("Invalid token payload: userId missing");
   }
+
+  if (typeof role !== "string") {
+    throw new Error("Invalid token payload: role missing");
+  }
+
+  return {
+    userId,
+    role,
+  };
 }

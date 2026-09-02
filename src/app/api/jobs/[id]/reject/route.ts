@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { prisma } from "@/lib/prisma";
 import { requireWorker } from "@/lib/permissions";
 import { assignNearestWorker } from "@/services/assignment.service";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireWorker(request);
+
+    const { id } = await params;
 
     const worker = await prisma.worker.findUnique({
       where: {
@@ -24,13 +27,13 @@ export async function PATCH(
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
     const job = await prisma.job.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -42,7 +45,7 @@ export async function PATCH(
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -54,7 +57,7 @@ export async function PATCH(
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
@@ -86,7 +89,7 @@ export async function PATCH(
       message: "Job rejected and reassigned",
     });
   } catch (error) {
-    console.error(error);
+    console.error("Reject Job Error:", error);
 
     return NextResponse.json(
       {
@@ -95,7 +98,7 @@ export async function PATCH(
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

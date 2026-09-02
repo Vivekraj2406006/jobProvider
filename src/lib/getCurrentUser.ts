@@ -16,7 +16,6 @@ export async function getCurrentUser(request: NextRequest) {
 
   const token = authHeader.substring(7);
 
-  console.log("JWT Token:", token);
 
   return verifyToken(token);
 }

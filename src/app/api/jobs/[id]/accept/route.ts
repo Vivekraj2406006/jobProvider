@@ -4,10 +4,12 @@ import { requireWorker } from "@/lib/permissions";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireWorker(request);
+
+    const { id } = await params;
 
     const worker = await prisma.worker.findUnique({
       where: {
@@ -23,13 +25,13 @@ export async function PATCH(
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
     const job = await prisma.job.findUnique({
       where: {
-        id: params.id,
+        id,
       },
     });
 
@@ -41,7 +43,7 @@ export async function PATCH(
         },
         {
           status: 404,
-        }
+        },
       );
     }
 
@@ -53,7 +55,7 @@ export async function PATCH(
         },
         {
           status: 403,
-        }
+        },
       );
     }
 
@@ -65,7 +67,7 @@ export async function PATCH(
         },
         {
           status: 400,
-        }
+        },
       );
     }
 
@@ -84,7 +86,7 @@ export async function PATCH(
       job: updatedJob,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Accept Job Error:", error);
 
     return NextResponse.json(
       {
@@ -93,7 +95,7 @@ export async function PATCH(
       },
       {
         status: 500,
-      }
+      },
     );
   }
 }

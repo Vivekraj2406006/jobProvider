@@ -1,45 +1,38 @@
-import { getCurrentUser } from "@/lib/getCurrentUser";
-import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireWorker } from "@/lib/permissions";
+import { assignNearestWorker } from "@/services/assignment.service";
 
-export async function GET(
+export async function PATCH(
   request: NextRequest,
-  context: {
-    params: Promise<{ id: string }>;
-  },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    await getCurrentUser(request);
+    const user = await requireWorker(request);
 
-    const { id } = await context.params;
+    const { id } = await params;
+
+    const worker = await prisma.worker.findUnique({
+      where: {
+        userId: user.userId,
+      },
+    });
+
+    if (!worker) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Worker not found",
+        },
+        {
+          status: 404,
+        },
+      );
+    }
 
     const job = await prisma.job.findUnique({
       where: {
         id,
-      },
-
-      include: {
-        service: true,
-
-        customer: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-
-        worker: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        },
       },
     });
 
@@ -55,17 +48,47 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(
-      {
-        success: true,
-        job,
-      },
-      {
-        status: 200,
-      },
-    );
+    if (job.workerId !== worker.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        {
+          status: 403,
+        },
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.job.update({
+        where: {
+          id: job.id,
+        },
+        data: {
+          workerId: null,
+          status: "OPEN",
+        },
+      }),
+
+      prisma.worker.update({
+        where: {
+          id: worker.id,
+        },
+        data: {
+          isAvailable: true,
+        },
+      }),
+    ]);
+
+    await assignNearestWorker(job.id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Job rejected and reassigned",
+    });
   } catch (error) {
-    console.error("Get Job Error:", error);
+    console.error("Reject Job Error:", error);
 
     return NextResponse.json(
       {
