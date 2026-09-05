@@ -4,7 +4,6 @@ import { verifyToken } from "@/lib/auth";
 export async function getCurrentUser(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
 
-  console.log("Authorization Header:", authHeader);
 
   if (!authHeader) {
     throw new Error("Authorization header missing");

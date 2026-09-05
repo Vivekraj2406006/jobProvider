@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   BriefcaseBusiness,
+  CalendarCheck,
   User,
   Wallet,
   Settings,
@@ -19,21 +20,31 @@ export const workerNavigation: WorkerNavigationItem[] = [
     href: "/worker",
     icon: LayoutDashboard,
   },
+
   {
     title: "Jobs",
     href: "/worker/jobs",
     icon: BriefcaseBusiness,
   },
+
+  {
+    title: "Bookings",
+    href: "/worker/bookings",
+    icon: CalendarCheck,
+  },
+
   {
     title: "Profile",
     href: "/worker/profile",
     icon: User,
   },
+
   {
     title: "Earnings",
     href: "/worker/earnings",
     icon: Wallet,
   },
+
   {
     title: "Settings",
     href: "/worker/settings",

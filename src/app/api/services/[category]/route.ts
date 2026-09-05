@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest,{ params }: { params: Promise<{ category: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ category: string }> }
+) {
   try {
     const { category } = await params;
+
     const categoryMap: Record<string, string> = {
       "home-services": "Home Services",
       cleaning: "Cleaning",
@@ -13,9 +17,21 @@ export async function GET(request: NextRequest,{ params }: { params: Promise<{ c
       technology: "Technology",
     };
 
+    const categoryName = categoryMap[category];
+
+    if (!categoryName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid service category",
+        },
+        { status: 400 }
+      );
+    }
+
     const services = await prisma.service.findMany({
       where: {
-        category: categoryMap[category],
+        category: categoryName,
         isActive: true,
       },
       orderBy: {
@@ -28,16 +44,14 @@ export async function GET(request: NextRequest,{ params }: { params: Promise<{ c
       services,
     });
   } catch (error) {
-    console.error(error);
+    console.error("Get services by category error:", error);
 
     return NextResponse.json(
       {
         success: false,
         message: "Internal Server Error",
       },
-      {
-        status: 500,
-      }
+      { status: 500 }
     );
   }
 }

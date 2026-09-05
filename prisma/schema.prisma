@@ -7,57 +7,44 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(cuid())
-  name     String
-  email    String @unique
-  password String
-  role     Role   @default(CUSTOMER)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
+  id        String    @id @default(cuid())
+  name      String
+  email     String    @unique
+  password  String
+  role      Role      @default(CUSTOMER)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   otp       String?
   otpExpiry DateTime?
-
-  jobs   Job[]
-  worker Worker?
-
   addresses Address[]
   bookings  Booking[]
+  jobs      Job[]
+  worker    Worker?
 }
 
 model Worker {
-  id     String @id @default(cuid())
-  userId String @unique
-
-  city       String?
-  rating     Float   @default(0)
-  experience Int
-
-  createdAt DateTime @default(now())
-
-  isAvailable Boolean @default(true)
-
-  bio           String?
-  completedJobs Int     @default(0)
-
-  latitude  Float?
-  longitude Float?
-
-  phone        String?
-  profileImage String?
-
-  skill String[]
-
-  area    String?
-  pincode String?
-  state   String?
-
-  jobs Job[]
-  user User  @relation(fields: [userId], references: [id])
-
-  bookings     Booking[]
-  availability WorkerAvailability[]
+  id              String                 @id @default(cuid())
+  userId          String                 @unique
+  city            String?
+  rating          Float                  @default(0)
+  experience      Int
+  createdAt       DateTime               @default(now())
+  isAvailable     Boolean                @default(true)
+  bio             String?
+  completedJobs   Int                    @default(0)
+  latitude        Float?
+  longitude       Float?
+  phone           String?
+  profileImage    String?
+  skill           String[]
+  area            String?
+  pincode         String?
+  state           String?
+  bookings        Booking[]
+  jobs            Job[]
+  user            User                   @relation(fields: [userId], references: [id])
+  availability    WorkerAvailability[]
+  bookingAttempts BookingWorkerAttempt[]
 
   @@index([city])
   @@index([pincode])
@@ -65,22 +52,18 @@ model Worker {
 }
 
 model Service {
-  id          String  @id @default(cuid())
-  name        String  @unique
+  id          String           @id @default(cuid())
+  name        String           @unique
   description String?
   price       Int
-
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  imageUrl String?
-  category String?
-
-  jobs     Job[]
-  packages ServicePackage[]
-  bookings Booking[]
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  imageUrl    String?
+  category    String?
+  bookings    Booking[]
+  jobs        Job[]
+  packages    ServicePackage[]
 
   @@index([category])
   @@index([isActive])
@@ -107,6 +90,117 @@ model Job {
   worker      Worker?   @relation(fields: [workerId], references: [id])
 }
 
+/// //////////////////////
+model Address {
+  id          String    @id @default(cuid())
+  userId      String
+  label       String
+  name        String
+  phone       String
+  addressLine String
+  area        String?
+  city        String
+  state       String
+  pincode     String
+  latitude    Float?
+  longitude   Float?
+  isDefault   Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
+  bookings    Booking[]
+
+  @@index([userId])
+  @@index([city, pincode])
+}
+
+model ServicePackage {
+  id          String    @id @default(cuid())
+  serviceId   String
+  name        String
+  description String?
+  price       Int
+  durationMin Int
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+  service     Service   @relation(fields: [serviceId], references: [id])
+
+  @@index([serviceId])
+  @@index([serviceId, isActive])
+}
+
+model Booking {
+  id             String                 @id @default(cuid())
+  customerId     String
+  workerId       String?
+  serviceId      String
+  packageId      String
+  addressId      String
+  scheduledDate  DateTime
+  startTime      DateTime
+  endTime        DateTime
+  status         BookingStatus          @default(PENDING)
+  basePrice      Int
+  platformFee    Int                    @default(0)
+  discount       Int                    @default(0)
+  totalAmount    Int
+  notes          String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  address        Address                @relation(fields: [addressId], references: [id])
+  customer       User                   @relation(fields: [customerId], references: [id])
+  package        ServicePackage         @relation(fields: [packageId], references: [id])
+  service        Service                @relation(fields: [serviceId], references: [id])
+  worker         Worker?                @relation(fields: [workerId], references: [id])
+  workerAttempts BookingWorkerAttempt[]
+
+  @@index([customerId])
+  @@index([workerId])
+  @@index([serviceId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([workerId, scheduledDate])
+  @@index([workerId, status])
+}
+
+model WorkerAvailability {
+  id        String  @id @default(cuid())
+  workerId  String
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  isActive  Boolean @default(true)
+  worker    Worker  @relation(fields: [workerId], references: [id])
+
+  @@unique([workerId, dayOfWeek])
+}
+
+model BookingWorkerAttempt {
+  id        String               @id @default(cuid())
+  bookingId String
+  workerId  String
+  status    BookingAttemptStatus @default(OFFERED)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  worker  Worker  @relation(fields: [workerId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, workerId])
+  @@index([bookingId])
+  @@index([workerId])
+  @@index([bookingId, status])
+}
+
+enum BookingAttemptStatus {
+  OFFERED
+  ACCEPTED
+  REJECTED
+  ASSIGNED
+}
+
 enum Role {
   CUSTOMER
   WORKER
@@ -125,97 +219,6 @@ enum JobStatus {
   REJECTED
 }
 
-/////////////////////////
-model Address {
-  id     String @id @default(cuid())
-  userId String
-
-  label       String
-  name        String
-  phone       String
-  addressLine String
-  area        String?
-  city        String
-  state       String
-  pincode     String
-
-  latitude  Float?
-  longitude Float?
-
-  isDefault Boolean @default(false)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user     User      @relation(fields: [userId], references: [id])
-  bookings Booking[]
-
-  @@index([userId])
-  @@index([city, pincode])
-}
-
-model ServicePackage {
-  id        String @id @default(cuid())
-  serviceId String
-
-  name        String
-  description String?
-
-  price       Int
-  durationMin Int
-
-  isActive Boolean @default(true)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  service  Service   @relation(fields: [serviceId], references: [id])
-  bookings Booking[]
-
-  @@index([serviceId])
-  @@index([serviceId, isActive])
-}
-
-model Booking {
-  id String @id @default(cuid())
-
-  customerId String
-  workerId   String?
-  serviceId  String
-  packageId  String
-  addressId  String
-
-  scheduledDate DateTime
-  startTime     DateTime
-  endTime       DateTime
-
-  status BookingStatus @default(PENDING)
-
-  basePrice   Int
-  platformFee Int @default(0)
-  discount    Int @default(0)
-  totalAmount Int
-
-  notes String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  customer User           @relation(fields: [customerId], references: [id])
-  worker   Worker?        @relation(fields: [workerId], references: [id])
-  service  Service        @relation(fields: [serviceId], references: [id])
-  package  ServicePackage @relation(fields: [packageId], references: [id])
-  address  Address        @relation(fields: [addressId], references: [id])
-
-  @@index([customerId])
-  @@index([workerId])
-  @@index([serviceId])
-  @@index([status])
-  @@index([scheduledDate])
-  @@index([workerId, scheduledDate])
-  @@index([workerId, status])
-}
-
 enum BookingStatus {
   PENDING
   ASSIGNED
@@ -226,19 +229,4 @@ enum BookingStatus {
   COMPLETED
   CANCELLED
   REJECTED
-}
-
-model WorkerAvailability {
-  id       String @id @default(cuid())
-  workerId String
-
-  dayOfWeek Int
-  startTime String
-  endTime   String
-
-  isActive Boolean @default(true)
-
-  worker Worker @relation(fields: [workerId], references: [id])
-
-  @@unique([workerId, dayOfWeek])
 }
