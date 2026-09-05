@@ -19,6 +19,7 @@ import {
   MessageCircle,
   X,
   ChevronRight,
+  CalendarCheck
 } from "lucide-react";
 
 export default function Navbar() {
@@ -74,56 +75,61 @@ export default function Navbar() {
     router.replace("/login");
   };
 
-const navLinks = isLoggedIn
-  ? [
-      {
-        href: "/dashboard/customer",
-        icon: Home,
-        label: "Dashboard",
-      },
-      {
-        href: "/dashboard/customer/jobs",
-        icon: Briefcase,
-        label: "My Jobs",
-      },
-      {
-        href: "/workers/create",
-        icon: Hammer,
-        label: "Become Worker",
-      },
-      {
-        href: "/worker",
-        icon: BriefcaseBusiness,
-        label: "Worker Dashboard",
-      },
-      {
-        href: "/messages",
-        icon: MessageCircle,
-        label: "Messages",
-      },
-      {
-        href: "/notifications",
-        icon: Bell,
-        label: "Notifications",
-      },
-      {
-        href: "/profile",
-        icon: User,
-        label: "Profile",
-      },
-      {
-        href: "/settings",
-        icon: Settings,
-        label: "Settings",
-      },
-    ]
-  : [
-      {
-        href: "/",
-        icon: Home,
-        label: "Home",
-      },
-    ];
+  const navLinks = isLoggedIn
+    ? [
+        {
+          href: "/dashboard/customer",
+          icon: Home,
+          label: "Dashboard",
+        },
+        {
+          href: "/dashboard/customer/jobs",
+          icon: Briefcase,
+          label: "My Jobs",
+        },
+        {
+          href: "/dashboard/customer/bookings",
+          label: "My Bookings",
+          icon: CalendarCheck,
+        },
+        {
+          href: "/workers/create",
+          icon: Hammer,
+          label: "Become Worker",
+        },
+        {
+          href: "/worker",
+          icon: BriefcaseBusiness,
+          label: "Worker Dashboard",
+        },
+        {
+          href: "/messages",
+          icon: MessageCircle,
+          label: "Messages",
+        },
+        {
+          href: "/notifications",
+          icon: Bell,
+          label: "Notifications",
+        },
+        {
+          href: "/profile",
+          icon: User,
+          label: "Profile",
+        },
+        {
+          href: "/settings",
+          icon: Settings,
+          label: "Settings",
+        },
+      ]
+    : [
+        {
+          href: "/",
+          icon: Home,
+          label: "Home",
+        },
+      ];
   return (
     <header className="fixed top-0 left-0 right-0 z-50 w-full border-b border-[#C8A56A]/15 bg-[#FFFDF9]/82 backdrop-blur-xl saturate-180 shadow-[0_1px_40px_rgba(100,80,40,0.06)]">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
