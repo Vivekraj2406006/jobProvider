@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   ArrowLeft,
@@ -14,13 +13,18 @@ import {
   Phone,
   Play,
   User,
+  Wifi,
+  WifiOff,
   XCircle,
 } from "lucide-react";
+import { useParams } from "next/navigation";
 
 import {
   useWorkerBooking,
   useWorkerBookingActions,
 } from "@/hooks/useWorkerBookings";
+
+import { useWorkerLocation } from "@/hooks/useWorkerLocation";
 
 import {
   getBookingActionLabel,
@@ -105,19 +109,21 @@ function getActionIcon(action: BookingAction) {
   }
 }
 
-export default async function WorkerBookingDetailsPage({
-  params,
-}: WorkerBookingDetailsPageProps) {
-  const { id } = await params;
+export default function WorkerBookingDetailsPage() {
+  const params = useParams<{ id: string }>();
+  const bookingId = params.id;
 
-  return <BookingDetails bookingId={id} />;
+  return <BookingDetails bookingId={bookingId} />;
 }
 
 function BookingDetails({ bookingId }: { bookingId: string }) {
-  const router = useRouter();
 
-  const { booking, loading, error, refreshBooking } =
-    useWorkerBooking(bookingId);
+  const {
+    booking,
+    loading,
+    error,
+    refreshBooking,
+  } = useWorkerBooking(bookingId);
 
   const {
     performAction,
@@ -125,20 +131,35 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
     error: actionError,
   } = useWorkerBookingActions(bookingId);
 
+  /*
+   * Start browser GPS tracking only while the worker
+   * is actively travelling to the customer.
+   */
+  const {
+    tracking,
+    error: locationError,
+  } = useWorkerLocation({
+    enabled: booking?.status === "ON_THE_WAY",
+  });
+
   async function handleAction(action: BookingAction) {
     if (action === "reject") {
       const confirmed = window.confirm(
         "Are you sure you want to reject this booking?",
       );
 
-      if (!confirmed) return;
+      if (!confirmed) {
+        return;
+      }
     }
 
     try {
       await performAction(action);
       await refreshBooking();
     } catch {
-      // Error is already handled by the hook.
+      /*
+       * Error is already handled by the hook.
+       */
     }
   }
 
@@ -179,6 +200,7 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
             </p>
 
             <button
+              type="button"
               onClick={refreshBooking}
               className="mt-5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
             >
@@ -264,7 +286,8 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
               </div>
 
               <p className="mt-2 font-medium text-gray-900">
-                {formatTime(booking.startTime)} - {formatTime(booking.endTime)}
+                {formatTime(booking.startTime)} -{" "}
+                {formatTime(booking.endTime)}
               </p>
             </div>
           </div>
@@ -275,13 +298,69 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
           <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4">
             <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
 
-            <p className="text-sm text-red-700">{actionError}</p>
+            <p className="text-sm text-red-700">
+              {actionError}
+            </p>
           </div>
+        )}
+
+        {/* Live location status */}
+        {booking.status === "ON_THE_WAY" && (
+          <section className="mt-6 rounded-2xl border border-indigo-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                    tracking
+                      ? "bg-indigo-50 text-indigo-600"
+                      : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {tracking ? (
+                    <Wifi className="h-5 w-5" />
+                  ) : (
+                    <WifiOff className="h-5 w-5" />
+                  )}
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-gray-900">
+                    Live location sharing
+                  </h2>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    {tracking
+                      ? "Your current location is being shared with the customer."
+                      : "Location sharing is not currently active."}
+                  </p>
+                </div>
+              </div>
+
+              {tracking && (
+                <div className="inline-flex items-center gap-2 self-start rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700">
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-indigo-500" />
+                  Sharing live
+                </div>
+              )}
+            </div>
+
+            {locationError && (
+              <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+
+                <p className="text-sm text-amber-700">
+                  {locationError}
+                </p>
+              </div>
+            )}
+          </section>
         )}
 
         {/* Customer */}
         <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900">Customer</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Customer
+          </h2>
 
           <div className="mt-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
@@ -328,7 +407,9 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
 
               <p className="mt-1 text-sm leading-6 text-gray-600">
                 {booking.address.addressLine}
-                {booking.address.area ? `, ${booking.address.area}` : ""}
+                {booking.address.area
+                  ? `, ${booking.address.area}`
+                  : ""}
                 {`, ${booking.address.city}, ${booking.address.state} - ${booking.address.pincode}`}
               </p>
 
@@ -409,7 +490,9 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
 
             {booking.platformFee > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Platform fee</span>
+                <span className="text-gray-500">
+                  Platform fee
+                </span>
 
                 <span className="font-medium text-gray-900">
                   ₹{booking.platformFee.toLocaleString("en-IN")}
@@ -419,7 +502,9 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
 
             {booking.discount > 0 && (
               <div className="flex justify-between">
-                <span className="text-gray-500">Discount</span>
+                <span className="text-gray-500">
+                  Discount
+                </span>
 
                 <span className="font-medium text-green-600">
                   -₹{booking.discount.toLocaleString("en-IN")}
@@ -429,7 +514,9 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
 
             <div className="border-t border-gray-100 pt-3">
               <div className="flex justify-between">
-                <span className="font-semibold text-gray-900">Total</span>
+                <span className="font-semibold text-gray-900">
+                  Total
+                </span>
 
                 <span className="text-lg font-bold text-gray-900">
                   ₹{booking.totalAmount.toLocaleString("en-IN")}
@@ -486,11 +573,16 @@ function BookingDetails({ bookingId }: { bookingId: string }) {
         )}
 
         {/* Cancelled / rejected */}
-        {(booking.status === "CANCELLED" || booking.status === "REJECTED") && (
+        {(booking.status === "CANCELLED" ||
+          booking.status === "REJECTED") && (
           <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-700">
             <XCircle className="h-5 w-5" />
+
             This booking is{" "}
-            {booking.status === "REJECTED" ? "rejected" : "cancelled"}.
+            {booking.status === "REJECTED"
+              ? "rejected"
+              : "cancelled"}
+            .
           </div>
         )}
       </div>

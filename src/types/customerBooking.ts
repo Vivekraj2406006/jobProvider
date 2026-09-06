@@ -16,6 +16,8 @@ export interface CustomerBookingWorker {
   completedJobs: number;
   phone: string | null;
   profileImage: string | null;
+  latitude: number | null;
+  longitude: number | null;
   skill: string[];
   user: {
     id: string;
