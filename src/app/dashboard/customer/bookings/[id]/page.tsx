@@ -15,7 +15,10 @@ export default function CustomerBookingDetailsPage() {
     booking,
     loading,
     error,
+    cancelling,
+    cancelError,
     refreshBooking,
+    cancelBooking,
   } = useCustomerBooking(bookingId);
 
   if (loading) {
@@ -45,9 +48,7 @@ export default function CustomerBookingDetailsPage() {
           </Link>
 
           <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-6">
-            <h1 className="font-bold text-red-800">
-              Booking unavailable
-            </h1>
+            <h1 className="font-bold text-red-800">Booking unavailable</h1>
 
             <p className="mt-1 text-sm text-red-700">
               {error || "This booking could not be found."}
@@ -89,7 +90,12 @@ export default function CustomerBookingDetailsPage() {
           </button>
         </div>
 
-        <CustomerBookingDetails booking={booking} />
+        <CustomerBookingDetails
+          booking={booking}
+          cancelling={cancelling}
+          cancelError={cancelError}
+          onCancel={cancelBooking}
+        />
       </div>
     </main>
   );

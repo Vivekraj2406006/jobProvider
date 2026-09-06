@@ -12,6 +12,12 @@ interface GetCustomerBookingResponse {
   booking?: CustomerBooking;
 }
 
+interface CancelCustomerBookingResponse {
+  success: boolean;
+  message?: string;
+  booking?: CustomerBooking;
+}
+
 function getToken() {
   const token = localStorage.getItem("token");
 
@@ -60,6 +66,33 @@ export async function getCustomerBooking(
   if (!response.ok || !data.success || !data.booking) {
     throw new Error(
       data.message || "Failed to load booking.",
+    );
+  }
+
+  return data.booking;
+}
+
+export async function cancelCustomerBooking(
+  bookingId: string,
+): Promise<CustomerBooking> {
+  const token = getToken();
+
+  const response = await fetch(`/api/bookings/${bookingId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      action: "cancel",
+    }),
+  });
+
+  const data: CancelCustomerBookingResponse = await response.json();
+
+  if (!response.ok || !data.success || !data.booking) {
+    throw new Error(
+      data.message || "Failed to cancel booking.",
     );
   }
 

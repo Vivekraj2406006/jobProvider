@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  cancelCustomerBooking,
   getCustomerBooking,
   getCustomerBookings,
 } from "@/lib/api/customerBookingApi";
@@ -35,7 +36,7 @@ export function useCustomerBookings() {
   }, []);
 
   useEffect(() => {
-    refreshBookings();
+    void refreshBookings();
   }, [refreshBookings]);
 
   return {
@@ -49,7 +50,9 @@ export function useCustomerBookings() {
 export function useCustomerBooking(bookingId: string) {
   const [booking, setBooking] = useState<CustomerBooking | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const refreshBooking = useCallback(
     async (showLoader = true) => {
@@ -85,8 +88,38 @@ export function useCustomerBooking(bookingId: string) {
     [bookingId],
   );
 
+  const cancelBooking = useCallback(async () => {
+    if (!bookingId) {
+      setCancelError("Booking ID is required.");
+      return null;
+    }
+
+    try {
+      setCancelling(true);
+      setCancelError(null);
+
+      const updatedBooking =
+        await cancelCustomerBooking(bookingId);
+
+      setBooking(updatedBooking);
+
+      return updatedBooking;
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Failed to cancel booking.";
+
+      setCancelError(message);
+
+      return null;
+    } finally {
+      setCancelling(false);
+    }
+  }, [bookingId]);
+
   useEffect(() => {
-    refreshBooking();
+    void refreshBooking();
   }, [refreshBooking]);
 
   useEffect(() => {
@@ -103,12 +136,16 @@ export function useCustomerBooking(bookingId: string) {
       "IN_PROGRESS",
     ];
 
+    /*
+     * Once a booking reaches a terminal state such as
+     * COMPLETED, CANCELLED, or REJECTED, polling stops.
+     */
     if (!activeStatuses.includes(booking.status)) {
       return;
     }
 
     const interval = window.setInterval(() => {
-      refreshBooking(false);
+      void refreshBooking(false);
     }, 10000);
 
     return () => {
@@ -119,7 +156,10 @@ export function useCustomerBooking(bookingId: string) {
   return {
     booking,
     loading,
+    cancelling,
     error,
+    cancelError,
     refreshBooking: () => refreshBooking(true),
+    cancelBooking,
   };
 }

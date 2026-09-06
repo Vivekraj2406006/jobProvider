@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
-import { prisma } from "@/lib/prisma";
-
 import { getCurrentUser } from "@/lib/getCurrentUser";
+import { prisma } from "@/lib/prisma";
+import { cancelBookingByCustomer } from "@/services/booking/cancellation";
 
 type RouteContext = {
   params: Promise<{
@@ -12,7 +12,7 @@ type RouteContext = {
 
 export async function GET(
   request: NextRequest,
-  context: RouteContext,
+  context: RouteContext
 ) {
   try {
     const user = await getCurrentUser(request);
@@ -23,7 +23,7 @@ export async function GET(
           success: false,
           message: "Unauthorized",
         },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
@@ -33,7 +33,7 @@ export async function GET(
           success: false,
           message: "Only customers can view bookings",
         },
-        { status: 403 },
+        { status: 403 }
       );
     }
 
@@ -54,6 +54,7 @@ export async function GET(
             imageUrl: true,
           },
         },
+
         package: {
           select: {
             id: true,
@@ -63,6 +64,7 @@ export async function GET(
             durationMin: true,
           },
         },
+
         address: {
           select: {
             id: true,
@@ -78,6 +80,7 @@ export async function GET(
             longitude: true,
           },
         },
+
         worker: {
           include: {
             user: {
@@ -88,6 +91,7 @@ export async function GET(
             },
           },
         },
+
         workerAttempts: {
           orderBy: {
             createdAt: "asc",
@@ -109,7 +113,7 @@ export async function GET(
           success: false,
           message: "Booking not found",
         },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -118,7 +122,7 @@ export async function GET(
         success: true,
         booking,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error("Get customer booking error:", error);
@@ -128,7 +132,121 @@ export async function GET(
         success: false,
         message: "Internal Server Error",
       },
-      { status: 500 },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: RouteContext
+) {
+  try {
+    const user = await getCurrentUser(request);
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized",
+        },
+        { status: 401 }
+      );
+    }
+
+    if (user.role !== "CUSTOMER") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only customers can update bookings",
+        },
+        { status: 403 }
+      );
+    }
+
+    const { id } = await context.params;
+
+    let body: { action?: string } = {};
+
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid request body",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (body.action !== "cancel") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid booking action",
+        },
+        { status: 400 }
+      );
+    }
+
+    const booking = await cancelBookingByCustomer(
+      id,
+      user.userId
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Booking cancelled successfully",
+        booking,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === "BOOKING_NOT_FOUND") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Booking not found",
+          },
+          { status: 404 }
+        );
+      }
+
+      if (error.message === "BOOKING_STATE_CHANGED") {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "This booking was updated before it could be cancelled. Please refresh and try again.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (error.message.startsWith("BOOKING_CANNOT_BE_CANCELLED:")) {
+        const status = error.message.split(":")[1];
+
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Booking cannot be cancelled while it is ${status.toLowerCase().replaceAll("_", " ")}.`,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    console.error("Cancel customer booking error:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to cancel booking",
+      },
+      { status: 500 }
     );
   }
 }
