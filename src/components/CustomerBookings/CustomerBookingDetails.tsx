@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import {
   AlertTriangle,
@@ -17,6 +18,18 @@ import {
 import BookingStatusTimeline from "@/components/CustomerBookings/BookingStatusTimeline";
 
 import type { CustomerBooking } from "@/types/customerBooking";
+
+const CustomerLiveTrackingMap = dynamic(
+  () => import("./CustomerLiveTrackingMap"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[360px] items-center justify-center rounded-2xl border border-gray-200 bg-white text-sm text-gray-500">
+        Loading live map...
+      </div>
+    ),
+  },
+);
 
 interface CustomerBookingDetailsProps {
   booking: CustomerBooking;
@@ -62,6 +75,15 @@ export default function CustomerBookingDetails({
 
   const isCancellable = canCustomerCancel(booking.status);
 
+  const hasWorkerLocation =
+    booking.worker !== null &&
+    typeof booking.worker.latitude === "number" &&
+    typeof booking.worker.longitude === "number";
+
+  const hasCustomerLocation =
+    typeof booking.address.latitude === "number" &&
+    typeof booking.address.longitude === "number";
+
   async function handleConfirmCancel() {
     if (!onCancel || cancelling) {
       return;
@@ -69,13 +91,6 @@ export default function CustomerBookingDetails({
 
     const result = await onCancel();
 
-    /*
-     * If cancellation succeeds, the hook updates the booking
-     * immediately. Closing the modal here keeps the UI responsive.
-     *
-     * When cancellation fails, the modal remains open so the
-     * customer can see the error and try again.
-     */
     if (result) {
       setShowCancelModal(false);
     }
@@ -138,6 +153,47 @@ export default function CustomerBookingDetails({
           {/* Status timeline */}
           <BookingStatusTimeline status={booking.status} />
 
+          {/* Live worker tracking */}
+          {booking.status === "ON_THE_WAY" && (
+            <section>
+              {hasWorkerLocation ? (
+                <CustomerLiveTrackingMap
+                  latitude={booking.worker!.latitude as number}
+                  longitude={booking.worker!.longitude as number}
+                  customerLatitude={
+                    hasCustomerLocation
+                      ? booking.address.latitude
+                      : null
+                  }
+                  customerLongitude={
+                    hasCustomerLocation
+                      ? booking.address.longitude
+                      : null
+                  }
+                />
+              ) : (
+                <div className="rounded-2xl border border-indigo-200 bg-white p-6 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+                      <MapPin className="h-5 w-5" />
+                    </div>
+
+                    <div>
+                      <h2 className="font-semibold text-gray-900">
+                        Tracking your worker
+                      </h2>
+
+                      <p className="mt-1 text-sm leading-6 text-gray-500">
+                        Your worker is on the way. Live location will appear
+                        as soon as their current position is available.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
+
           {/* Cancellation error */}
           {cancelError && (
             <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -180,6 +236,18 @@ export default function CustomerBookingDetails({
                 </p>
               </div>
             </div>
+
+            {hasCustomerLocation && (
+              <a
+                href={`https://www.google.com/maps/dir/?api=1&destination=${booking.address.latitude},${booking.address.longitude}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#10201b] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1a3028]"
+              >
+                <MapPin className="h-4 w-4" />
+                Open in Maps
+              </a>
+            )}
           </section>
 
           {/* Price details */}
@@ -308,10 +376,7 @@ export default function CustomerBookingDetails({
               <div className="mt-6 border-t border-[#edf1ef] pt-5">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCancelModal(true);
-                    return;
-                  }}
+                  onClick={() => setShowCancelModal(true)}
                   disabled={cancelling}
                   className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
