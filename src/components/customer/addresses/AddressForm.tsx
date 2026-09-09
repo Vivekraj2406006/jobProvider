@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, MapPin, X } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, Navigation, X } from "lucide-react";
+
 import type {
   Address,
   AddressInput,
@@ -24,6 +25,8 @@ interface FormState {
   city: string;
   state: string;
   pincode: string;
+  latitude: number | null;
+  longitude: number | null;
   isDefault: boolean;
 }
 
@@ -36,6 +39,8 @@ const emptyForm: FormState = {
   city: "",
   state: "",
   pincode: "",
+  latitude: null,
+  longitude: null,
   isDefault: false,
 };
 
@@ -47,6 +52,8 @@ export default function AddressForm({
 }: AddressFormProps) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const isEditing = Boolean(address);
 
@@ -61,6 +68,8 @@ export default function AddressForm({
         city: address.city,
         state: address.state,
         pincode: address.pincode,
+        latitude: address.latitude ?? null,
+        longitude: address.longitude ?? null,
         isDefault: address.isDefault,
       });
     } else {
@@ -68,6 +77,7 @@ export default function AddressForm({
     }
 
     setErrors({});
+    setLocationError(null);
   }, [address]);
 
   const updateField = <K extends keyof FormState>(
@@ -125,6 +135,66 @@ export default function AddressForm({
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleGetCurrentLocation = () => {
+    setLocationError(null);
+
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    setLocationLoading(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          setLocationError("The browser returned invalid coordinates.");
+          setLocationLoading(false);
+          return;
+        }
+
+        setForm((current) => ({
+          ...current,
+          latitude,
+          longitude,
+        }));
+
+        setLocationError(null);
+        setLocationLoading(false);
+      },
+      (error) => {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError(
+              "Location permission was denied. Please allow location access and try again.",
+            );
+            break;
+
+          case error.POSITION_UNAVAILABLE:
+            setLocationError("Your current location could not be determined.");
+            break;
+
+          case error.TIMEOUT:
+            setLocationError("Location request timed out. Please try again.");
+            break;
+
+          default:
+            setLocationError("Unable to determine your current location.");
+        }
+
+        setLocationLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 15000,
+      },
+    );
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -132,7 +202,14 @@ export default function AddressForm({
       return;
     }
 
-    const payload: AddressInput = {
+    /*
+     * Keep latitude/longitude in the submitted runtime payload.
+     *
+     * The Address model already supports nullable latitude/longitude.
+     * The cast keeps this form compatible even when an older
+     * AddressInput type has not yet been updated.
+     */
+    const payload = {
       label: form.label.trim(),
       name: form.name.trim(),
       phone: form.phone.trim(),
@@ -141,14 +218,18 @@ export default function AddressForm({
       city: form.city.trim(),
       state: form.state.trim(),
       pincode: form.pincode.trim(),
+      latitude: form.latitude,
+      longitude: form.longitude,
       isDefault: form.isDefault,
+    } as AddressInput & {
+      latitude: number | null;
+      longitude: number | null;
     };
 
     if (address) {
-      const updatePayload: UpdateAddressInput = payload;
-      await onSubmit(updatePayload);
+      await onSubmit(payload as UpdateAddressInput);
     } else {
-      await onSubmit(payload);
+      await onSubmit(payload as AddressInput);
     }
   };
 
@@ -158,6 +239,9 @@ export default function AddressForm({
         ? "border-red-400 focus:border-red-500"
         : "border-[#DED4C8] focus:border-[#1F6F5B]"
     }`;
+
+  const hasLocation =
+    typeof form.latitude === "number" && typeof form.longitude === "number";
 
   return (
     <div className="rounded-2xl border border-[#E7DED2] bg-white p-6 shadow-[0_10px_40px_rgba(47,41,35,0.06)]">
@@ -184,7 +268,7 @@ export default function AddressForm({
         <button
           type="button"
           onClick={onCancel}
-          disabled={loading}
+          disabled={loading || locationLoading}
           className="rounded-lg p-2 text-[#7A6E61] transition hover:bg-[#F5F1EB] hover:text-[#2F2923] disabled:cursor-not-allowed disabled:opacity-50"
           aria-label="Close form"
         >
@@ -297,9 +381,7 @@ export default function AddressForm({
           />
 
           {errors.addressLine && (
-            <p className="mt-1.5 text-xs text-red-500">
-              {errors.addressLine}
-            </p>
+            <p className="mt-1.5 text-xs text-red-500">{errors.addressLine}</p>
           )}
         </div>
 
@@ -310,9 +392,7 @@ export default function AddressForm({
             className="mb-2 block text-sm font-medium text-[#51483F]"
           >
             Area / Locality
-            <span className="ml-1 font-normal text-[#9A8E81]">
-              (optional)
-            </span>
+            <span className="ml-1 font-normal text-[#9A8E81]">(optional)</span>
           </label>
 
           <input
@@ -400,11 +480,69 @@ export default function AddressForm({
             />
 
             {errors.pincode && (
-              <p className="mt-1.5 text-xs text-red-500">
-                {errors.pincode}
-              </p>
+              <p className="mt-1.5 text-xs text-red-500">{errors.pincode}</p>
             )}
           </div>
+        </div>
+
+        {/* Location */}
+        <div className="rounded-2xl border border-[#DDEAE4] bg-[#F7FBF9] p-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                  hasLocation
+                    ? "bg-[#E7F3EE] text-[#1F6F5B]"
+                    : "bg-white text-[#7A6E61]"
+                }`}
+              >
+                {hasLocation ? (
+                  <CheckCircle2 size={19} />
+                ) : (
+                  <MapPin size={19} />
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-[#2F2923]">
+                  Service location
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-[#7A6E61]">
+                  {hasLocation
+                    ? `Location saved: ${form.latitude?.toFixed(
+                        6,
+                      )}, ${form.longitude?.toFixed(6)}`
+                    : "Save your current GPS position so the worker can find this address accurately."}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleGetCurrentLocation}
+              disabled={loading || locationLoading}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-[#1F6F5B] bg-white px-4 py-2.5 text-sm font-semibold text-[#1F6F5B] transition hover:bg-[#E7F3EE] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {locationLoading ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Navigation size={16} />
+              )}
+
+              {locationLoading
+                ? "Getting location..."
+                : hasLocation
+                  ? "Update location"
+                  : "Use my current location"}
+            </button>
+          </div>
+
+          {locationError && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700">
+              {locationError}
+            </div>
+          )}
         </div>
 
         {/* Default address */}
@@ -421,6 +559,7 @@ export default function AddressForm({
             <p className="text-sm font-semibold text-[#51483F]">
               Set as default address
             </p>
+
             <p className="mt-0.5 text-xs text-[#8B7D6E]">
               Use this address automatically for future bookings.
             </p>
@@ -432,7 +571,7 @@ export default function AddressForm({
           <button
             type="button"
             onClick={onCancel}
-            disabled={loading}
+            disabled={loading || locationLoading}
             className="rounded-xl border border-[#DED4C8] px-5 py-3 text-sm font-semibold text-[#6B5D4D] transition hover:bg-[#F5F1EB] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Cancel
@@ -440,7 +579,7 @@ export default function AddressForm({
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || locationLoading}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1F6F5B] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#185846] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading && <Loader2 size={17} className="animate-spin" />}
